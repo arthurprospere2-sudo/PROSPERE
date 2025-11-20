@@ -20,6 +20,13 @@ export interface Comment {
   likes: number;
 }
 
+export interface VideoAnalytics {
+  retentionCurve: number[]; // Pourcentages de rétention à intervalle régulier (ex: 0%, 10%, 20%...)
+  viewsByCountry: { code: string; country: string; value: number }[];
+  trafficSources: { source: string; value: number }[];
+  demographics: { ageRange: string; percentage: number }[];
+}
+
 export interface Video {
   id: string;
   uploaderId: string;
@@ -33,6 +40,8 @@ export interface Video {
   timestamp: number;
   category: string;
   duration: string;
+  estimatedRevenue?: number; // Revenu généré par la vidéo
+  analytics?: VideoAnalytics; // Données détaillées
 }
 
 export enum VideoCategory {
@@ -54,4 +63,6 @@ export type ViewState =
   | { name: 'SIGNUP' }
   | { name: 'SEARCH'; query: string }
   | { name: 'DASHBOARD' }
-  | { name: 'MONETIZATION' };
+  | { name: 'MONETIZATION' }
+  | { name: 'DOWNLOAD' }
+  | { name: 'SHORTS' };

@@ -3,10 +3,10 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Menu, Search, Bell, User as UserIcon, Home, Compass, PlaySquare, Clock, 
   ThumbsUp, ThumbsDown, Share2, MoreVertical, Upload, Settings, LogOut, Video as VideoIcon, X, MessageSquare, User, BarChart2,
-  DollarSign, TrendingUp, CreditCard, Lock, Heart
+  DollarSign, TrendingUp, CreditCard, Lock, Heart, Download, Monitor, Smartphone, Tv, ArrowLeft, Globe, Users, Trash2
 } from './components/Icons';
 import { Video, User as UserType, Comment, ViewState, VideoCategory } from './types';
-import { MOCK_VIDEOS, MOCK_USERS, MOCK_COMMENTS, CURRENT_USER_ID } from './constants';
+import { MOCK_VIDEOS, MOCK_USERS, MOCK_COMMENTS, CURRENT_USER_ID, MOCK_SHORTS } from './constants';
 import { generateVideoDescription } from './services/geminiService';
 
 // --- Helper Components ---
@@ -209,7 +209,14 @@ export default function App() {
       dislikes: [],
       timestamp: Date.now(),
       category: videoData.category as VideoCategory || VideoCategory.ALL,
-      duration: '00:00'
+      duration: '00:00',
+      estimatedRevenue: 0,
+      analytics: {
+        retentionCurve: [100],
+        viewsByCountry: [],
+        trafficSources: [],
+        demographics: []
+      }
     };
 
     setVideos([newVideo, ...videos]);
@@ -349,7 +356,7 @@ export default function App() {
       <div className="p-2">
         {[
           { icon: Home, label: 'Accueil', action: () => setView({ name: 'HOME' }) },
-          { icon: Compass, label: 'Shorts', action: () => {} },
+          { icon: Compass, label: 'Shorts', action: () => setView({ name: 'SHORTS' }) },
           { icon: Clock, label: 'Abonnements', action: () => {} },
         ].map((item, idx) => (
           <div key={idx} onClick={item.action} className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-[#272727] cursor-pointer mb-1 transition-colors">
@@ -379,6 +386,15 @@ export default function App() {
              </div>
            </>
         )}
+
+        {/* Download App */}
+        <div 
+          onClick={() => setView({ name: 'DOWNLOAD' })} 
+          className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-[#272727] cursor-pointer mb-1"
+        >
+          <Download className="w-6 h-6 flex-shrink-0 text-blue-500" />
+          <span className="text-sm font-medium xl:block lg:hidden group-hover:block overflow-hidden whitespace-nowrap">Télécharger</span>
+        </div>
         
         <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
         
@@ -402,6 +418,105 @@ export default function App() {
   );
 
   // --- Pages ---
+  
+  const ShortsPage = () => {
+    const [currentShortIndex, setCurrentShortIndex] = useState(0);
+    const shorts = MOCK_SHORTS;
+    const currentShort = shorts[currentShortIndex];
+    const uploader = users.find(u => u.id === currentShort?.uploaderId);
+
+    // Simple navigation handlers
+    const nextShort = () => {
+      setCurrentShortIndex(prev => (prev + 1) % shorts.length);
+    };
+
+    const prevShort = () => {
+      setCurrentShortIndex(prev => (prev - 1 + shorts.length) % shorts.length);
+    };
+
+    // Keyboard navigation
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowDown') nextShort();
+        if (e.key === 'ArrowUp') prevShort();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    if (!currentShort) return <div>Aucun short disponible</div>;
+
+    return (
+      <div className="h-[calc(100vh-64px)] bg-[#0f0f0f] flex items-center justify-center overflow-hidden">
+         <div className="relative w-full max-w-md h-full sm:h-[90%] bg-black sm:rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
+            {/* Video Player */}
+            <div className="absolute inset-0">
+               {/* Using object-cover on a regular video to simulate vertical crop */}
+               <video 
+                 key={currentShort.id} // Force re-render on change
+                 src={currentShort.videoUrl} 
+                 className="w-full h-full object-cover opacity-90"
+                 autoPlay
+                 loop
+                 muted={false} // In real app, handle autoplay policy
+                 playsInline
+               />
+               {/* Dark Overlay for text readability */}
+               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 pointer-events-none"></div>
+            </div>
+
+            {/* Right Side Interactions */}
+            <div className="absolute right-4 bottom-20 flex flex-col gap-6 items-center z-10">
+               <div className="flex flex-col items-center gap-1">
+                 <div className="bg-gray-800/60 backdrop-blur-md p-3 rounded-full hover:bg-gray-700 cursor-pointer transition-colors">
+                   <ThumbsUp className="w-8 h-8 text-white" />
+                 </div>
+                 <span className="text-white text-xs font-bold">{currentShort.likes.length > 0 ? currentShort.likes.length : 'J\'aime'}</span>
+               </div>
+
+               <div className="flex flex-col items-center gap-1">
+                 <div className="bg-gray-800/60 backdrop-blur-md p-3 rounded-full hover:bg-gray-700 cursor-pointer transition-colors">
+                   <MessageSquare className="w-8 h-8 text-white" />
+                 </div>
+                 <span className="text-white text-xs font-bold">45</span>
+               </div>
+
+               <div className="flex flex-col items-center gap-1">
+                 <div className="bg-gray-800/60 backdrop-blur-md p-3 rounded-full hover:bg-gray-700 cursor-pointer transition-colors">
+                   <Share2 className="w-8 h-8 text-white" />
+                 </div>
+                 <span className="text-white text-xs font-bold">Partager</span>
+               </div>
+               
+               <div className="bg-gray-800/60 backdrop-blur-md p-3 rounded-full hover:bg-gray-700 cursor-pointer transition-colors mt-4">
+                   <MoreVertical className="w-6 h-6 text-white" />
+               </div>
+            </div>
+
+            {/* Bottom Info */}
+            <div className="absolute left-4 bottom-6 right-16 z-10">
+               <div className="flex items-center gap-3 mb-3">
+                  <img src={uploader?.avatar} className="w-10 h-10 rounded-full border border-white" />
+                  <span className="text-white font-bold">@{uploader?.username}</span>
+                  <button className="bg-white text-black px-3 py-1 rounded-full text-xs font-bold hover:bg-gray-200">S'abonner</button>
+               </div>
+               <h3 className="text-white text-lg font-bold mb-2 line-clamp-2">{currentShort.title}</h3>
+               <p className="text-gray-200 text-sm line-clamp-1">{currentShort.description}</p>
+            </div>
+
+            {/* Navigation Arrows (Visible on Desktop) */}
+            <div className="absolute right-[-60px] top-1/2 transform -translate-y-1/2 hidden md:flex flex-col gap-4">
+               <button onClick={prevShort} className="bg-gray-800/50 p-3 rounded-full hover:bg-gray-700 text-white">
+                  <ArrowLeft className="w-6 h-6 rotate-90" />
+               </button>
+               <button onClick={nextShort} className="bg-gray-800/50 p-3 rounded-full hover:bg-gray-700 text-white">
+                  <ArrowLeft className="w-6 h-6 -rotate-90" />
+               </button>
+            </div>
+         </div>
+      </div>
+    );
+  };
 
   const HomePage = () => {
     // Find a featured video (most viewed or most recent)
@@ -596,6 +711,96 @@ export default function App() {
              </Button>
           </div>
         )}
+      </div>
+    );
+  };
+
+  const DownloadPage = () => {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-white dark:bg-[#0f0f0f] flex flex-col items-center animate-fade-in">
+        
+        {/* Hero */}
+        <div className="w-full bg-gradient-to-b from-neo-red/10 to-transparent pt-16 pb-20 px-4 text-center">
+           <div className="max-w-4xl mx-auto">
+              <div className="w-20 h-20 bg-neo-red rounded-2xl flex items-center justify-center shadow-xl shadow-red-500/30 mx-auto mb-8 rotate-12 transform hover:rotate-0 transition-all duration-500">
+                  <PlaySquare className="text-white fill-white w-10 h-10" />
+              </div>
+              <h1 className="text-4xl sm:text-6xl font-bold mb-6 tracking-tight">
+                Regardez vos vidéos <br/>
+                <span className="text-neo-red">partout, tout le temps.</span>
+              </h1>
+              <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-10">
+                Profitez de la meilleure expérience NeoTube avec nos applications natives pour ordinateur, mobile et TV.
+              </p>
+              
+              <div className="flex flex-wrap justify-center gap-4">
+                 <button className="px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-lg flex items-center gap-3">
+                   <Download className="w-5 h-5" />
+                   Télécharger pour Windows
+                 </button>
+                 <button className="px-8 py-4 bg-gray-200 dark:bg-[#272727] text-black dark:text-white rounded-full font-bold text-lg hover:bg-gray-300 dark:hover:bg-[#3f3f3f] transition-colors">
+                   Autres versions
+                 </button>
+              </div>
+           </div>
+        </div>
+
+        {/* Platforms Grid */}
+        <div className="max-w-6xl mx-auto px-6 pb-20">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+             
+             {/* Desktop */}
+             <div className="bg-gray-50 dark:bg-[#1a1a1a] p-8 rounded-3xl hover:shadow-2xl transition-shadow duration-300 border border-gray-200 dark:border-gray-800">
+                <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400">
+                  <Monitor className="w-7 h-7" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Ordinateur</h3>
+                <p className="text-gray-500 mb-8">Windows, macOS, Linux</p>
+                <ul className="space-y-3 mb-8 text-sm text-gray-600 dark:text-gray-400">
+                  <li className="flex items-center gap-2">✓ Mode Sombre natif</li>
+                  <li className="flex items-center gap-2">✓ Raccourcis clavier</li>
+                  <li className="flex items-center gap-2">✓ Upload plus rapide</li>
+                </ul>
+                <button className="w-full py-3 rounded-xl border border-gray-300 dark:border-gray-700 font-bold hover:bg-gray-100 dark:hover:bg-[#272727] transition-colors" onClick={() => alert('Téléchargement simulé')}>
+                  Télécharger
+                </button>
+             </div>
+
+             {/* Mobile */}
+             <div className="bg-gray-50 dark:bg-[#1a1a1a] p-8 rounded-3xl hover:shadow-2xl transition-shadow duration-300 border border-gray-200 dark:border-gray-800 relative overflow-hidden">
+                <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mb-6 text-green-600 dark:text-green-400">
+                  <Smartphone className="w-7 h-7" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Mobile</h3>
+                <p className="text-gray-500 mb-8">Android & iOS</p>
+                
+                <div className="bg-white dark:bg-black p-4 rounded-xl inline-block mb-6 shadow-inner">
+                  <div className="w-32 h-32 bg-gray-200 dark:bg-[#333] flex items-center justify-center text-xs text-center text-gray-500">
+                    QR Code
+                  </div>
+                </div>
+                <p className="text-sm text-center text-gray-500">Scannez pour installer</p>
+             </div>
+
+             {/* TV */}
+             <div className="bg-gray-50 dark:bg-[#1a1a1a] p-8 rounded-3xl hover:shadow-2xl transition-shadow duration-300 border border-gray-200 dark:border-gray-800">
+                <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mb-6 text-purple-600 dark:text-purple-400">
+                  <Tv className="w-7 h-7" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">TV</h3>
+                <p className="text-gray-500 mb-8">Android TV, Apple TV, Smart TV</p>
+                <ul className="space-y-3 mb-8 text-sm text-gray-600 dark:text-gray-400">
+                  <li className="flex items-center gap-2">✓ 4K HDR Support</li>
+                  <li className="flex items-center gap-2">✓ Contrôle vocal</li>
+                  <li className="flex items-center gap-2">✓ Mode Cinéma</li>
+                </ul>
+                <button className="w-full py-3 rounded-xl border border-gray-300 dark:border-gray-700 font-bold hover:bg-gray-100 dark:hover:bg-[#272727] transition-colors" onClick={() => alert('Bientôt disponible')}>
+                  En savoir plus
+                </button>
+             </div>
+
+           </div>
+        </div>
       </div>
     );
   };
@@ -952,18 +1157,53 @@ export default function App() {
 
   const DashboardPage = () => {
     if (!currentUser) return <AuthPage />;
+    
+    // State for filtering/sorting and selection
+    const [sortOption, setSortOption] = useState<'DATE' | 'VIEWS' | 'LIKES' | 'REVENUE'>('DATE');
+    const [filterCategory, setFilterCategory] = useState<VideoCategory | 'All'>('All');
+    const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+    const [videoToDelete, setVideoToDelete] = useState<string | null>(null);
 
-    // Calculate Stats
+    // Basic Stats
     const myVideos = videos.filter(v => v.uploaderId === currentUser.id);
     const totalViews = myVideos.reduce((acc, curr) => acc + curr.views, 0);
     const totalLikes = myVideos.reduce((acc, curr) => acc + curr.likes.length, 0);
     
-    // Comments on my videos
-    const myVideoIds = myVideos.map(v => v.id);
-    const totalComments = comments.filter(c => myVideoIds.includes(c.videoId)).length;
-
     // Best performing video
     const topVideo = [...myVideos].sort((a, b) => b.views - a.views)[0];
+
+    const confirmDelete = () => {
+      if (videoToDelete) {
+        setVideos(prev => prev.filter(v => v.id !== videoToDelete));
+        setVideoToDelete(null);
+        if (selectedVideoId === videoToDelete) {
+          setSelectedVideoId(null);
+        }
+      }
+    };
+
+    // Filtered & Sorted Videos for Table
+    const processedVideos = useMemo(() => {
+      let res = [...myVideos];
+
+      // Filter
+      if (filterCategory !== 'All') {
+        res = res.filter(v => v.category === filterCategory);
+      }
+
+      // Sort
+      res.sort((a, b) => {
+        switch (sortOption) {
+          case 'DATE': return b.timestamp - a.timestamp;
+          case 'VIEWS': return b.views - a.views;
+          case 'LIKES': return b.likes.length - a.likes.length;
+          case 'REVENUE': return (b.estimatedRevenue || 0) - (a.estimatedRevenue || 0);
+          default: return 0;
+        }
+      });
+
+      return res;
+    }, [myVideos, sortOption, filterCategory]);
 
     const StatCard = ({ title, value, icon: Icon, color }: any) => (
       <div className="bg-white dark:bg-[#1f1f1f] p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
@@ -979,8 +1219,220 @@ export default function App() {
       </div>
     );
 
+    // --- Sub-View: Detailed Video Analytics ---
+    if (selectedVideoId) {
+      const video = myVideos.find(v => v.id === selectedVideoId);
+      if (!video) return <div>Vidéo introuvable</div>;
+      
+      const analytics = video.analytics || { 
+        retentionCurve: [100, 80, 60, 40, 20], 
+        viewsByCountry: [], 
+        trafficSources: [],
+        demographics: []
+      };
+
+      // Generate simplified SVG path for retention
+      const points = analytics.retentionCurve.map((val, idx) => {
+        const x = (idx / (analytics.retentionCurve.length - 1)) * 100;
+        const y = 100 - val; // Invert Y because SVG coords go down
+        return `${x},${y}`;
+      }).join(' ');
+
+      return (
+        <div className="p-6 max-w-7xl mx-auto animate-fade-in">
+          <button 
+            onClick={() => setSelectedVideoId(null)} 
+            className="flex items-center gap-2 mb-6 text-gray-500 hover:text-black dark:hover:text-white font-medium transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" /> Retour au tableau de bord
+          </button>
+
+          {/* Header Info */}
+          <div className="flex flex-col md:flex-row gap-6 mb-8 items-start">
+             <div className="w-full md:w-64 aspect-video rounded-xl overflow-hidden flex-shrink-0">
+               <img src={video.thumbnail} className="w-full h-full object-cover" />
+             </div>
+             <div className="flex-1">
+               <h1 className="text-2xl font-bold mb-2">{video.title}</h1>
+               <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
+                 <span>Publiée le {new Date(video.timestamp).toLocaleDateString()}</span>
+                 <span>•</span>
+                 <span>{video.duration}</span>
+                 <span>•</span>
+                 <span className="bg-gray-100 dark:bg-[#272727] px-2 py-0.5 rounded">{video.category}</span>
+               </div>
+               <div className="flex gap-2">
+                 <Button variant="secondary" onClick={() => setView({ name: 'WATCH', videoId: video.id })}>
+                   <PlaySquare className="w-4 h-4" /> Voir sur NeoTube
+                 </Button>
+                 <Button variant="secondary">
+                   <Settings className="w-4 h-4" /> Modifier
+                 </Button>
+                 <Button 
+                   variant="ghost" 
+                   className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                   onClick={() => setVideoToDelete(video.id)}
+                 >
+                   <Trash2 className="w-4 h-4" /> Supprimer
+                 </Button>
+               </div>
+             </div>
+          </div>
+
+          {/* Key Metrics Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+             <div className="bg-white dark:bg-[#1f1f1f] p-5 rounded-xl border border-gray-200 dark:border-gray-800">
+               <p className="text-gray-500 text-xs font-bold uppercase mb-2">Vues</p>
+               <h3 className="text-2xl font-bold">{video.views.toLocaleString()}</h3>
+             </div>
+             <div className="bg-white dark:bg-[#1f1f1f] p-5 rounded-xl border border-gray-200 dark:border-gray-800">
+               <p className="text-gray-500 text-xs font-bold uppercase mb-2">Taux de clics (CTR)</p>
+               <h3 className="text-2xl font-bold">5.4%</h3>
+             </div>
+             <div className="bg-white dark:bg-[#1f1f1f] p-5 rounded-xl border border-gray-200 dark:border-gray-800">
+               <p className="text-gray-500 text-xs font-bold uppercase mb-2">Durée moyenne</p>
+               <h3 className="text-2xl font-bold">4:12</h3>
+             </div>
+             <div className="bg-white dark:bg-[#1f1f1f] p-5 rounded-xl border border-gray-200 dark:border-gray-800">
+               <p className="text-gray-500 text-xs font-bold uppercase mb-2">Revenus</p>
+               <h3 className="text-2xl font-bold text-green-500">{video.estimatedRevenue?.toFixed(2)} €</h3>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+             
+             {/* Retention Chart */}
+             <div className="lg:col-span-2 bg-white dark:bg-[#1f1f1f] p-6 rounded-xl border border-gray-200 dark:border-gray-800">
+               <div className="flex items-center gap-3 mb-6">
+                 <TrendingUp className="w-5 h-5 text-blue-500" />
+                 <h3 className="font-bold text-lg">Rétention d'audience</h3>
+               </div>
+               
+               <div className="relative h-64 w-full pl-8 pb-6">
+                 {/* Y Axis Labels */}
+                 <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-xs text-gray-400 font-medium">
+                    <span>100%</span>
+                    <span>50%</span>
+                    <span>0%</span>
+                 </div>
+
+                 {/* SVG Chart */}
+                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                    <defs>
+                      <linearGradient id="retentionGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    
+                    {/* Grid lines */}
+                    <line x1="0" y1="0" x2="100" y2="0" stroke="currentColor" strokeOpacity="0.05" vectorEffect="non-scaling-stroke" strokeDasharray="4" />
+                    <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" strokeOpacity="0.05" vectorEffect="non-scaling-stroke" strokeDasharray="4" />
+                    <line x1="0" y1="100" x2="100" y2="100" stroke="currentColor" strokeOpacity="0.1" vectorEffect="non-scaling-stroke" />
+                    
+                    {/* Area fill */}
+                    <path 
+                      d={`M0,100 ${points} 100,100 Z`} 
+                      fill="url(#retentionGradient)" 
+                      stroke="none" 
+                    />
+                    {/* Line */}
+                    <polyline 
+                       fill="none" 
+                       stroke="#3b82f6" 
+                       strokeWidth="3" 
+                       points={points}
+                       vectorEffect="non-scaling-stroke"
+                       strokeLinecap="round"
+                       strokeLinejoin="round"
+                    />
+                 </svg>
+                 
+                 {/* X Axis Labels */}
+                 <div className="absolute bottom-0 left-8 right-0 flex justify-between text-xs text-gray-500 mt-2">
+                   <span>0:00</span>
+                   <span>{video.duration}</span>
+                 </div>
+               </div>
+
+               <p className="text-sm text-gray-500 mt-4">
+                 Le taux de rétention moyen est de <span className="font-bold text-black dark:text-white">{Math.round(analytics.retentionCurve.reduce((a,b) => a+b, 0) / analytics.retentionCurve.length)}%</span>. 
+                 Les moments clés sont mis en évidence sur la courbe.
+               </p>
+             </div>
+
+             {/* Geography */}
+             <div className="bg-white dark:bg-[#1f1f1f] p-6 rounded-xl border border-gray-200 dark:border-gray-800">
+               <div className="flex items-center gap-3 mb-6">
+                 <Globe className="w-5 h-5 text-purple-500" />
+                 <h3 className="font-bold text-lg">Géographie</h3>
+               </div>
+               
+               <div className="space-y-5">
+                 {analytics.viewsByCountry.length > 0 ? analytics.viewsByCountry.map((item, idx) => (
+                   <div key={idx}>
+                     <div className="flex justify-between text-sm mb-1">
+                       <span className="font-medium">{item.country}</span>
+                       <span className="text-gray-500">{(item.value / video.views * 100).toFixed(1)}%</span>
+                     </div>
+                     <div className="w-full h-2 bg-gray-100 dark:bg-[#333] rounded-full overflow-hidden">
+                       <div 
+                         className="h-full bg-purple-500 rounded-full" 
+                         style={{ width: `${(item.value / video.views * 100)}%` }}
+                       ></div>
+                     </div>
+                   </div>
+                 )) : (
+                   <p className="text-gray-500 text-sm">Pas assez de données géographiques.</p>
+                 )}
+               </div>
+             </div>
+             
+             {/* Traffic Sources (New) */}
+             <div className="bg-white dark:bg-[#1f1f1f] p-6 rounded-xl border border-gray-200 dark:border-gray-800">
+               <div className="flex items-center gap-3 mb-6">
+                 <Users className="w-5 h-5 text-orange-500" />
+                 <h3 className="font-bold text-lg">Sources de trafic</h3>
+               </div>
+                <div className="space-y-4">
+                  {analytics.trafficSources.length > 0 ? analytics.trafficSources.map((source, i) => (
+                    <div key={i} className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 last:border-0 pb-2 last:pb-0">
+                       <span className="text-sm">{source.source}</span>
+                       <span className="font-bold text-sm">{source.value}%</span>
+                    </div>
+                  )) : (
+                    <div className="text-sm text-gray-500">
+                      <div className="flex justify-between mb-2"><span>Recherche YouTube</span> <span>45%</span></div>
+                      <div className="flex justify-between mb-2"><span>Suggestions</span> <span>30%</span></div>
+                      <div className="flex justify-between mb-2"><span>Externe</span> <span>15%</span></div>
+                      <div className="flex justify-between"><span>Autres</span> <span>10%</span></div>
+                    </div>
+                  )}
+                </div>
+             </div>
+
+          </div>
+          
+          {/* Modal for Delete confirmation from Detailed View */}
+          {videoToDelete && (
+             <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+                <div className="bg-white dark:bg-[#1f1f1f] p-6 rounded-2xl shadow-2xl max-w-sm w-full animate-fade-in border border-gray-200 dark:border-gray-800">
+                   <h3 className="text-xl font-bold mb-2">Supprimer la vidéo ?</h3>
+                   <p className="text-gray-500 mb-6">Cette action est irréversible. La vidéo et toutes ses statistiques seront perdues.</p>
+                   <div className="flex justify-end gap-3">
+                      <Button variant="ghost" onClick={() => setVideoToDelete(null)}>Annuler</Button>
+                      <Button variant="danger" onClick={confirmDelete}>Supprimer</Button>
+                   </div>
+                </div>
+             </div>
+           )}
+        </div>
+      );
+    }
+
+    // --- Default Dashboard View ---
     return (
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6 max-w-7xl mx-auto relative">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold">Tableau de bord de la chaîne</h1>
           <div className="flex gap-2">
@@ -1002,39 +1454,83 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Videos List */}
-          <div className="lg:col-span-2 bg-white dark:bg-[#1f1f1f] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-             <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-               <h2 className="text-lg font-bold">Contenu récent</h2>
+          {/* Video List with Filters */}
+          <div className="lg:col-span-2 bg-white dark:bg-[#1f1f1f] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+               <h2 className="text-lg font-bold">Contenu</h2>
+               
+               {/* Filters Toolbar */}
+               <div className="flex flex-wrap gap-2">
+                 <select 
+                   className="bg-gray-100 dark:bg-[#252525] border-none text-sm rounded-lg px-3 py-2 focus:ring-0 cursor-pointer outline-none"
+                   value={filterCategory}
+                   onChange={(e) => setFilterCategory(e.target.value as any)}
+                 >
+                   <option value="All">Toutes les catégories</option>
+                   {Object.values(VideoCategory).map(c => <option key={c} value={c}>{c}</option>)}
+                 </select>
+
+                 <select 
+                   className="bg-gray-100 dark:bg-[#252525] border-none text-sm rounded-lg px-3 py-2 focus:ring-0 cursor-pointer outline-none"
+                   value={sortOption}
+                   onChange={(e) => setSortOption(e.target.value as any)}
+                 >
+                   <option value="DATE">Date</option>
+                   <option value="VIEWS">Vues</option>
+                   <option value="LIKES">Likes</option>
+                   <option value="REVENUE">Revenus</option>
+                 </select>
+               </div>
              </div>
-             <div className="overflow-x-auto">
+
+             <div className="overflow-x-auto flex-1">
                <table className="w-full text-left text-sm">
-                 <thead className="bg-gray-50 dark:bg-[#252525] text-gray-500">
+                 <thead className="bg-gray-5 dark:bg-[#252525] text-gray-500 sticky top-0">
                    <tr>
                      <th className="px-6 py-3">Vidéo</th>
-                     <th className="px-6 py-3">Date</th>
-                     <th className="px-6 py-3">Vues</th>
-                     <th className="px-6 py-3">J'aime</th>
+                     <th className="px-6 py-3 whitespace-nowrap">Date</th>
+                     <th className="px-6 py-3 whitespace-nowrap">Vues</th>
+                     <th className="px-6 py-3 whitespace-nowrap">J'aime</th>
+                     <th className="px-6 py-3 whitespace-nowrap">Revenus</th>
+                     <th className="px-6 py-3 whitespace-nowrap">Actions</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                   {myVideos.sort((a, b) => b.timestamp - a.timestamp).map(video => (
-                     <tr key={video.id} className="hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors cursor-pointer" onClick={() => setView({ name: 'WATCH', videoId: video.id })}>
+                   {processedVideos.map(video => (
+                     <tr key={video.id} className="hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors cursor-pointer" onClick={() => setSelectedVideoId(video.id)}>
                        <td className="px-6 py-4">
-                         <div className="flex items-center gap-3">
+                         <div className="flex items-center gap-3 min-w-[250px]">
                            <img src={video.thumbnail} className="w-16 h-9 object-cover rounded" />
-                           <span className="font-medium truncate max-w-[200px]">{video.title}</span>
+                           <div className="flex flex-col">
+                              <span className="font-medium truncate max-w-[180px]">{video.title}</span>
+                              <span className="text-xs text-gray-500 bg-gray-100 dark:bg-[#333] w-fit px-1.5 rounded mt-1">{video.category}</span>
+                           </div>
                          </div>
                        </td>
                        <td className="px-6 py-4 text-gray-500">{new Date(video.timestamp).toLocaleDateString()}</td>
                        <td className="px-6 py-4">{video.views.toLocaleString()}</td>
                        <td className="px-6 py-4">{video.likes.length}</td>
+                       <td className="px-6 py-4 font-mono text-green-600 dark:text-green-400 font-medium">
+                         {video.estimatedRevenue ? `${video.estimatedRevenue.toFixed(2)} €` : '-'}
+                       </td>
+                       <td className="px-6 py-4">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setVideoToDelete(video.id);
+                            }}
+                            className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 rounded-full transition-colors"
+                            title="Supprimer la vidéo"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                       </td>
                      </tr>
                    ))}
-                   {myVideos.length === 0 && (
+                   {processedVideos.length === 0 && (
                      <tr>
-                       <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                         Vous n'avez pas encore publié de vidéo.
+                       <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                         Aucune vidéo ne correspond à vos critères.
                        </td>
                      </tr>
                    )}
@@ -1050,7 +1546,7 @@ export default function App() {
              </div>
              {topVideo ? (
                <div className="p-6">
-                  <div className="aspect-video rounded-lg overflow-hidden mb-4 cursor-pointer" onClick={() => setView({ name: 'WATCH', videoId: topVideo.id })}>
+                  <div className="aspect-video rounded-lg overflow-hidden mb-4 cursor-pointer" onClick={() => setSelectedVideoId(topVideo.id)}>
                     <img src={topVideo.thumbnail} className="w-full h-full object-cover" />
                   </div>
                   <h3 className="font-bold mb-1 line-clamp-1">{topVideo.title}</h3>
@@ -1059,7 +1555,7 @@ export default function App() {
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span>Vues</span>
-                      <span className="font-bold">{topVideo.views}</span>
+                      <span className="font-bold">{topVideo.views.toLocaleString()}</span>
                     </div>
                     <div className="w-full bg-gray-100 dark:bg-[#333] h-1.5 rounded-full overflow-hidden">
                       <div className="bg-blue-500 h-full" style={{ width: '100%' }}></div>
@@ -1069,6 +1565,15 @@ export default function App() {
                       <span>Taux de like</span>
                       <span className="font-bold">{Math.round((topVideo.likes.length / (topVideo.views || 1)) * 100)}%</span>
                     </div>
+
+                    <div className="flex justify-between text-sm">
+                      <span>Revenus générés</span>
+                      <span className="font-bold text-green-500">+{topVideo.estimatedRevenue?.toFixed(2) || 0} €</span>
+                    </div>
+                    
+                    <Button variant="secondary" className="w-full mt-2" onClick={() => setSelectedVideoId(topVideo.id)}>
+                      Voir l'analyse détaillée
+                    </Button>
                   </div>
                </div>
              ) : (
@@ -1078,6 +1583,20 @@ export default function App() {
              )}
           </div>
         </div>
+
+        {/* Confirmation Modal */}
+        {videoToDelete && (
+           <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-[#1f1f1f] p-6 rounded-2xl shadow-2xl max-w-sm w-full animate-fade-in border border-gray-200 dark:border-gray-800">
+                 <h3 className="text-xl font-bold mb-2">Supprimer la vidéo ?</h3>
+                 <p className="text-gray-500 mb-6">Cette action est irréversible. La vidéo et toutes ses statistiques seront perdues.</p>
+                 <div className="flex justify-end gap-3">
+                    <Button variant="ghost" onClick={() => setVideoToDelete(null)}>Annuler</Button>
+                    <Button variant="danger" onClick={confirmDelete}>Supprimer</Button>
+                 </div>
+              </div>
+           </div>
+        )}
       </div>
     );
   };
@@ -1129,6 +1648,8 @@ export default function App() {
       case 'PROFILE': return <ProfilePage userId={view.userId} />;
       case 'DASHBOARD': return <DashboardPage />;
       case 'MONETIZATION': return <MonetizationPage />;
+      case 'DOWNLOAD': return <DownloadPage />;
+      case 'SHORTS': return <ShortsPage />;
       case 'SEARCH': return <HomePage />; // Search filtering is handled in useMemo
       default: return <HomePage />;
     }
