@@ -1,0 +1,8 @@
+{
+  "name": "Copy of NeoTube",
+  "description": "Une plateforme vidéo moderne, rapide et complète inspirée de YouTube. Comprend la lecture de vidéos, l'upload, les commentaires, les likes et un système de profils utilisateurs.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
